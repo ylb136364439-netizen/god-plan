@@ -1,4 +1,4 @@
-const CACHE = "god-plan-v4";
+const CACHE = "god-plan-v5";
 const APP_SHELL = [
   "./", "index.html", "styles.css", "app-config.js", "store.js", "app.js",
   "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"
