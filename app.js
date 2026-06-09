@@ -1,4 +1,5 @@
 const GP = window.GodPlanStore;
+const APP_VERSION = window.APP_VERSION || "1.0.0";
 let store = GP.loadStore();
 let reviewDate = GP.toDateKey();
 let editingPlan = false;
@@ -84,7 +85,7 @@ function renderReview() {
   $$("[data-review]").forEach(textarea => textarea.value = saved[textarea.dataset.review] || "");
 }
 function renderProfile() {
-  $("#appVersion").textContent = `V${window.APP_VERSION}`;
+  $("#appVersion").textContent = `V${APP_VERSION}`;
   const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
   $("#installHint").textContent = standalone ? "已从手机桌面启动" : installPrompt ? "点击即可安装" : "查看安装方法";
   if (!store.activePlan) { $("#statsGrid").innerHTML = ""; $("#calendar").innerHTML = ""; $("#goalStats").innerHTML = ""; $("#planInfo").textContent = "当前没有进行中的计划。"; return; }
@@ -191,7 +192,7 @@ updateConnectionStatus(null);
 if ("serviceWorker" in navigator) window.addEventListener("load", async () => {
   const registration = await navigator.serviceWorker.register("sw.js");
   const showUpdate = worker => { waitingWorker = worker; $("#updateBanner").hidden = false; };
-  if (registration.waiting) showUpdate(registration.waiting);
+  if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
   registration.addEventListener("updatefound", () => {
     const worker = registration.installing;
     worker.addEventListener("statechange", () => {
