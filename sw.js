@@ -1,11 +1,13 @@
-const CACHE = "god-plan-v6";
+const CACHE = "god-plan-v7";
 const APP_SHELL = [
   "./", "index.html", "styles.css", "app-config.js", "store.js", "app.js",
   "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"
 ];
 
 self.addEventListener("install", event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(APP_SHELL)));
+  event.waitUntil(caches.open(CACHE).then(cache => Promise.all(
+    APP_SHELL.map(url => fetch(url, { cache: "reload" }).then(response => cache.put(url, response)))
+  )));
 });
 
 self.addEventListener("activate", event => {

@@ -1,5 +1,5 @@
 const GP = window.GodPlanStore;
-const APP_VERSION = window.APP_VERSION || "1.0.0";
+const APP_VERSION = window.APP_VERSION || "1.1.0";
 let store = GP.loadStore();
 let reviewDate = GP.toDateKey();
 let editingPlan = false;
