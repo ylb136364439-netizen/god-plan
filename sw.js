@@ -1,4 +1,4 @@
-const CACHE = "god-plan-v5";
+const CACHE = "god-plan-v6";
 const APP_SHELL = [
   "./", "index.html", "styles.css", "app-config.js", "store.js", "app.js",
   "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png"
@@ -13,8 +13,6 @@ self.addEventListener("activate", event => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(key => key !== CACHE).map(key => caches.delete(key))))
       .then(() => self.clients.claim())
-      .then(() => self.clients.matchAll({ type: "window" }))
-      .then(clients => clients.forEach(client => client.postMessage({ type: "UPDATE_READY" })))
   );
 });
 

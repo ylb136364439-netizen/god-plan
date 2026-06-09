@@ -35,7 +35,9 @@ function emptyState(title, copy, action) {
 function openPage(pageId) {
   $$(".page, .nav-item").forEach(item => item.classList.remove("active"));
   $(`#${pageId}`).classList.add("active"); $(`.nav-item[data-page="${pageId}"]`).classList.add("active");
-  window.scrollTo({ top: 0, behavior: "smooth" }); if (pageId === "profilePage") renderProfile();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (pageId === "profilePage") renderProfile();
+  if (pageId === "knowledgePage") renderKnowledge();
 }
 function renderHeader() {
   $("#todayLabel").textContent = formatDate(todayKey());
@@ -61,11 +63,13 @@ function renderToday() {
   const percent = Math.round(done / tasks.length * 100); setProgress(percent);
   root.innerHTML = `<div class="section-heading"><div><p class="eyebrow">今日行动</p><h2>${tasks.length} 件小事</h2></div><span class="streak">连续完成 ${GP.calculateStats(store).streak} 天</span></div>
   <div class="habit-list">${tasks.map(task => `<article class="habit-card ${store.checkins[todayKey()]?.[task.id] ? "done" : ""}" data-task-id="${task.id}"><span class="habit-icon">${task.icon}</span><div class="habit-copy"><strong class="habit-title">${escapeHtml(task.name)}</strong><span class="habit-detail">${escapeHtml(task.detail)}</span></div><button class="check-button" type="button">✓</button></article>`).join("")}</div>
-  <article class="night-card"><span class="night-icon">☾</span><div><strong>今晚顺序</strong><p>读书 15 分钟 → 复盘 10 分钟 → 睡觉</p></div></article>`;
+  <article class="night-card"><span class="night-icon">☾</span><div><strong>今晚顺序</strong><p>读书 15 分钟 → 提炼观点 → 复盘 10 分钟 → 睡觉</p></div></article>
+  <article class="compound-intro today-compound"><span>↗</span><div><strong>别让今天读过的内容消失</strong><p>提炼一个观点，并安排一次真实应用。</p><button class="compound-quick-button" id="todayKnowledge" type="button">记录今天学到的</button></div></article>`;
   $$(".habit-card").forEach(card => card.onclick = () => {
     const wasComplete = percent === 100; GP.toggleCheckin(todayKey(), card.dataset.taskId, store); store = GP.loadStore(); renderAll();
     if (!wasComplete && GP.completionForDate(todayKey(), store)?.ratio === 1) showToast("今天全部完成，做得漂亮。");
   });
+  $("#todayKnowledge").onclick = () => openKnowledgeDialog();
 }
 function renderPlan() {
   if (!store.activePlan) {
@@ -101,7 +105,47 @@ function renderProfile() {
   $("#goalStats").innerHTML = Object.entries(store.activePlan.goals).map(([id, goal]) => `<div class="goal-stat"><span>${goal.icon} ${escapeHtml(goal.name)}</span><div class="mini-progress"><i style="width:${stats.goalRates[id]}%"></i></div><strong>${stats.goalRates[id]}%</strong></div>`).join("");
   $("#planInfo").textContent = `${store.activePlan.name} · ${store.activePlan.startDate} 至 ${store.activePlan.endDate}`;
 }
-function renderAll() { renderToday(); renderPlan(); renderReview(); renderProfile(); }
+function knowledgeStatusLabel(status) {
+  return ({ pending: "待实践", applied: "已实践", validated: "长期原则" })[status] || "待实践";
+}
+function knowledgeCardHtml(card, due = false) {
+  const needsApplication = card.status === "pending" && card.applyDate <= todayKey();
+  const needsReview = (card.reviewDates || []).some(date => date <= todayKey() && !(card.reviewedDates || []).includes(date));
+  return `<article class="knowledge-card ${due ? "due" : ""}" data-knowledge-id="${card.id}">
+    <div class="knowledge-card-header"><strong>${escapeHtml(card.insight)}</strong><span class="knowledge-status">${knowledgeStatusLabel(card.status)}</span></div>
+    <p><strong>我的理解：</strong>${escapeHtml(card.ownWords)}</p>
+    <p><strong>应用行动：</strong>${escapeHtml(card.application)} · ${escapeHtml(card.applyDate)}</p>
+    ${card.result ? `<p><strong>实践结果：</strong>${escapeHtml(card.result)}</p>` : ""}
+    <div class="knowledge-actions">
+      ${needsApplication ? `<button data-action="apply" type="button">记录实践结果</button>` : ""}
+      ${needsReview ? `<button data-action="review" type="button">完成本次回忆</button>` : ""}
+      <button class="secondary" data-action="edit" type="button">编辑卡片</button>
+    </div>
+  </article>`;
+}
+function renderKnowledge() {
+  const cards = store.knowledgeCards || [];
+  const summary = GP.getKnowledgeSummary(store);
+  $("#knowledgeStats").innerHTML = [
+    ["知识卡", summary.total],
+    ["待应用", summary.pendingApplication],
+    ["待复习", summary.dueReview],
+    ["长期原则", summary.validated]
+  ].map(([label, value]) => `<article class="stat-card"><strong>${value}</strong><span>${label}</span></article>`).join("");
+  const due = cards.filter(card => (card.status === "pending" && card.applyDate <= todayKey()) ||
+    (card.reviewDates || []).some(date => date <= todayKey() && !(card.reviewedDates || []).includes(date)));
+  $("#knowledgeDue").innerHTML = due.length ? due.map(card => knowledgeCardHtml(card, true)).join("") :
+    '<div class="empty-knowledge">今天没有待应用或待复习的卡片。读完后，提炼一个值得实践的观点吧。</div>';
+  $("#knowledgeList").innerHTML = cards.length ? cards.map(card => knowledgeCardHtml(card)).join("") :
+    '<div class="empty-knowledge">还没有知识卡片。真正的复利，从把第一个观点用于现实开始。</div>';
+  $$("[data-knowledge-id] button").forEach(button => button.onclick = () => {
+    const card = cards.find(item => item.id === button.closest("[data-knowledge-id]").dataset.knowledgeId);
+    if (button.dataset.action === "review") {
+      GP.markKnowledgeReviewed(card.id, todayKey(), store); store = GP.loadStore(); renderKnowledge(); showToast("已完成主动回忆");
+    } else openKnowledgeDialog(card, button.dataset.action === "apply");
+  });
+}
+function renderAll() { renderToday(); renderPlan(); renderReview(); renderKnowledge(); renderProfile(); }
 function openPlanDialog(editing) {
   editingPlan = editing; const config = editing && store.activePlan ? store.activePlan : GP.defaultPlanConfig(); const form = $("#planForm");
   $("#dialogTitle").textContent = editing ? "编辑计划" : "创建计划"; $("#savePlanButton").textContent = editing ? "保存修改" : "开始计划";
@@ -119,8 +163,22 @@ function planFromForm() {
   const days = [...form.querySelectorAll('[name="swimDay"]:checked')].map(input => Number(input.value)); base.goals.swim.weekdays = days.length ? days : [2, 6];
   base.weeks = base.weeks.map((week, i) => Object.fromEntries(["focus","read","pushup","swim"].map(field => [field, form.elements[`week-${i}-${field}`]?.value || week[field]]))); return base;
 }
+function openKnowledgeDialog(card = null, focusResult = false) {
+  const form = $("#knowledgeForm");
+  $("#knowledgeDialogTitle").textContent = card ? (focusResult ? "记录实践结果" : "编辑知识卡片") : "记录新观点";
+  form.elements.knowledgeId.value = card?.id || "";
+  form.elements.insight.value = card?.insight || "";
+  form.elements.ownWords.value = card?.ownWords || "";
+  form.elements.application.value = card?.application || "";
+  form.elements.applyDate.value = card?.applyDate || GP.addDays(todayKey(), 1);
+  form.elements.result.value = card?.result || "";
+  form.elements.knowledgeStatus.value = focusResult ? "applied" : card?.status || "pending";
+  $("#knowledgeDialog").showModal();
+  if (focusResult) setTimeout(() => form.elements.result.focus(), 100);
+}
 $$(".nav-item").forEach(button => button.onclick = () => openPage(button.dataset.page));
 $("#editPlanButton").onclick = () => openPlanDialog(true);
+$("#newKnowledge").onclick = () => openKnowledgeDialog();
 $("#previousReview").onclick = () => { reviewDate = GP.addDays(reviewDate, -1); renderReview(); };
 $("#nextReview").onclick = () => { reviewDate = GP.addDays(reviewDate, 1); renderReview(); };
 $("#reviewDate").onchange = event => { reviewDate = event.target.value > todayKey() ? todayKey() : event.target.value; renderReview(); };
@@ -132,6 +190,21 @@ $("#planForm").onsubmit = event => {
   if (event.submitter?.value === "cancel") return; event.preventDefault(); const config = planFromForm();
   if (editingPlan) { store.activePlan.name = config.name; store.activePlan.goals = config.goals; store.activePlan.weeks = config.weeks; GP.saveStore(store); } else GP.createPlan(config, store);
   store = GP.loadStore(); $("#planDialog").close(); renderAll(); openPage("todayPage"); showToast(editingPlan ? "计划已更新" : "六周计划已开始");
+};
+$("#knowledgeForm").onsubmit = event => {
+  if (event.submitter?.value === "cancel") return;
+  event.preventDefault();
+  const form = event.currentTarget;
+  GP.saveKnowledgeCard({
+    id: form.elements.knowledgeId.value || undefined,
+    insight: form.elements.insight.value.trim(),
+    ownWords: form.elements.ownWords.value.trim(),
+    application: form.elements.application.value.trim(),
+    applyDate: form.elements.applyDate.value,
+    result: form.elements.result.value.trim(),
+    status: form.elements.knowledgeStatus.value
+  }, store);
+  store = GP.loadStore(); $("#knowledgeDialog").close(); renderAll(); openPage("knowledgePage"); showToast("知识卡片已保存");
 };
 $("#restartPlan").onclick = () => { if (confirm("重新开始会归档当前计划，并清空当前打卡和复盘。确定继续吗？") && confirm("请再次确认：要重新开始吗？")) openPlanDialog(false); };
 $("#clearData").onclick = () => { if (confirm("这会删除全部计划、打卡和复盘，确定继续吗？") && confirm("删除后无法恢复。请再次确认。")) { GP.clearAll(); store = GP.loadStore(); renderAll(); openPage("todayPage"); showToast("全部数据已清除"); } };
@@ -161,7 +234,7 @@ $("#backupFile").onchange = async event => {
     const validation = GP.validateBackup(backup);
     if (!validation.valid) throw new Error(validation.error);
     const summary = validation.summary;
-    showInfo("确认恢复备份", `<div class="backup-summary"><p><strong>计划：</strong>${escapeHtml(summary.planName)}</p><p><strong>备份时间：</strong>${escapeHtml(new Date(summary.exportedAt).toLocaleString("zh-CN"))}</p><p><strong>打卡记录：</strong>${summary.checkinDays} 天</p><p><strong>复盘记录：</strong>${summary.reviewDays} 天</p><p><strong>历史计划：</strong>${summary.archivedPlans} 个</p><em>恢复将覆盖当前手机中的全部数据。</em></div>`, "恢复此备份", () => {
+    showInfo("确认恢复备份", `<div class="backup-summary"><p><strong>计划：</strong>${escapeHtml(summary.planName)}</p><p><strong>备份时间：</strong>${escapeHtml(new Date(summary.exportedAt).toLocaleString("zh-CN"))}</p><p><strong>打卡记录：</strong>${summary.checkinDays} 天</p><p><strong>复盘记录：</strong>${summary.reviewDays} 天</p><p><strong>知识卡片：</strong>${summary.knowledgeCards} 张</p><p><strong>历史计划：</strong>${summary.archivedPlans} 个</p><em>恢复将覆盖当前手机中的全部数据。</em></div>`, "恢复此备份", () => {
       if (!confirm("请再次确认：覆盖当前数据并恢复备份吗？")) return;
       GP.importBackup(backup); store = GP.loadStore(); $("#infoDialog").close(); renderAll(); showToast("备份恢复成功");
     });
@@ -191,7 +264,11 @@ updateConnectionStatus(null);
 
 if ("serviceWorker" in navigator) window.addEventListener("load", async () => {
   const registration = await navigator.serviceWorker.register("sw.js");
-  const showUpdate = worker => { waitingWorker = worker; $("#updateBanner").hidden = false; };
+  const showUpdate = worker => {
+    if (!worker) return;
+    waitingWorker = worker;
+    $("#updateBanner").hidden = false;
+  };
   if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
   registration.addEventListener("updatefound", () => {
     const worker = registration.installing;
@@ -199,11 +276,16 @@ if ("serviceWorker" in navigator) window.addEventListener("load", async () => {
       if (worker.state === "installed" && navigator.serviceWorker.controller) showUpdate(worker);
     });
   });
-  navigator.serviceWorker.addEventListener("message", event => {
-    if (event.data?.type === "UPDATE_READY" && registration.waiting) showUpdate(registration.waiting);
-  });
   navigator.serviceWorker.addEventListener("controllerchange", () => window.location.reload());
+  registration.update().catch(() => {});
 });
-$("#updateApp").onclick = () => waitingWorker?.postMessage({ type: "SKIP_WAITING" });
+$("#dismissUpdate").onclick = () => { $("#updateBanner").hidden = true; };
+$("#updateApp").onclick = () => {
+  if (!waitingWorker) { $("#updateBanner").hidden = true; showToast("当前已经是最新版本"); return; }
+  $("#updateApp").disabled = true;
+  $("#updateApp").textContent = "更新中";
+  waitingWorker.postMessage({ type: "SKIP_WAITING" });
+  setTimeout(() => { $("#updateBanner").hidden = true; }, 3000);
+};
 renderAll();
-if (["#todayPage", "#planPage", "#reviewPage", "#profilePage"].includes(window.location.hash)) openPage(window.location.hash.slice(1));
+if (["#todayPage", "#planPage", "#knowledgePage", "#reviewPage", "#profilePage"].includes(window.location.hash)) openPage(window.location.hash.slice(1));

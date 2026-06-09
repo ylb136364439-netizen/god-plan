@@ -12,8 +12,9 @@ required.forEach(file => {
 const html = fs.readFileSync("index.html", "utf8");
 const app = fs.readFileSync("app.js", "utf8");
 const ids = new Set([...html.matchAll(/id="([^"]+)"/g)].map(match => match[1]));
+const dynamicIds = new Set([...app.matchAll(/id="([^"]+)"/g)].map(match => match[1]));
 const refs = [...app.matchAll(/\$\("#([^" ]+)"\)/g)].map(match => match[1]);
-const missing = [...new Set(refs.filter(id => !ids.has(id)))];
+const missing = [...new Set(refs.filter(id => !ids.has(id) && !dynamicIds.has(id)))];
 if (missing.length) throw new Error(`页面缺少元素：${missing.join(", ")}`);
 
 const manifest = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));

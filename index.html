@@ -36,6 +36,16 @@
         <label><span>📌 明天最重要的一件事</span><textarea data-review="tomorrow" placeholder="给明天一个清晰的方向"></textarea></label>
       </form>
     </section>
+    <section class="page" id="knowledgePage">
+      <div class="section-heading"><div><p class="eyebrow">知识复利</p><h2>学以致用</h2></div><button class="text-button" id="newKnowledge" type="button">记录新观点</button></div>
+      <article class="compound-intro">
+        <span>↗</span>
+        <div><strong>让知识经过现实验证</strong><p>阅读输入 → 自己解释 → 明日应用 → 记录结果 → 间隔复习</p></div>
+      </article>
+      <div class="stats-grid compound-stats" id="knowledgeStats"></div>
+      <div class="knowledge-section"><div class="panel-heading"><strong>今天要做</strong><span>应用与复习</span></div><div class="knowledge-list" id="knowledgeDue"></div></div>
+      <div class="knowledge-section"><div class="panel-heading"><strong>知识卡片</strong><span>你的个人方法论</span></div><div class="knowledge-list" id="knowledgeList"></div></div>
+    </section>
     <section class="page" id="profilePage">
       <div class="section-heading"><div><p class="eyebrow">执行记录</p><h2>我的成长</h2></div></div>
       <div class="stats-grid" id="statsGrid"></div>
@@ -58,6 +68,7 @@
   <nav class="bottom-nav">
     <button class="nav-item active" data-page="todayPage" type="button"><span>✓</span><small>今日</small></button>
     <button class="nav-item" data-page="planPage" type="button"><span>⌁</span><small>计划</small></button>
+    <button class="nav-item" data-page="knowledgePage" type="button"><span>↗</span><small>复利</small></button>
     <button class="nav-item" data-page="reviewPage" type="button"><span>✎</span><small>复盘</small></button>
     <button class="nav-item" data-page="profilePage" type="button"><span>◎</span><small>我的</small></button>
   </nav>
@@ -81,7 +92,24 @@
       <button class="primary-button" id="infoAction" type="button" hidden>确认</button>
     </div>
   </dialog>
-  <div class="update-banner" id="updateBanner" hidden><span>发现新版本，更新不会影响你的数据。</span><button id="updateApp" type="button">立即更新</button></div>
+  <dialog id="knowledgeDialog">
+    <form method="dialog" id="knowledgeForm">
+      <div class="dialog-heading"><div><p class="eyebrow">知识复利卡片</p><h2 id="knowledgeDialogTitle">记录新观点</h2></div><button class="icon-button" value="cancel" type="submit" aria-label="关闭">×</button></div>
+      <input name="knowledgeId" type="hidden">
+      <label class="field"><span>今天学到的核心观点</span><textarea name="insight" required placeholder="用一句话提炼，不要复制原文"></textarea></label>
+      <label class="field"><span>用自己的话解释</span><textarea name="ownWords" required placeholder="假设要讲给朋友听，你会怎么说？"></textarea></label>
+      <label class="field"><span>准备如何应用</span><textarea name="application" required placeholder="写成一个可以执行的真实行动"></textarea></label>
+      <label class="field"><span>计划应用日期</span><input name="applyDate" type="date" required></label>
+      <label class="field"><span>实践结果</span><textarea name="result" placeholder="应用后发生了什么？有效、需调整，还是不适用？"></textarea></label>
+      <fieldset><legend>当前状态</legend><div class="status-options">
+        <label><input type="radio" name="knowledgeStatus" value="pending"><span>待实践</span></label>
+        <label><input type="radio" name="knowledgeStatus" value="applied"><span>已实践</span></label>
+        <label><input type="radio" name="knowledgeStatus" value="validated"><span>长期原则</span></label>
+      </div></fieldset>
+      <button class="primary-button" id="saveKnowledge" value="default" type="submit">保存知识卡片</button>
+    </form>
+  </dialog>
+  <div class="update-banner" id="updateBanner" hidden><span>发现新版本，更新不会影响你的数据。</span><div><button id="dismissUpdate" type="button">稍后</button><button id="updateApp" type="button">立即更新</button></div></div>
   <div class="toast" id="toast" role="status"></div>
   <script src="app-config.js"></script><script src="store.js"></script><script src="app.js"></script>
 </body>

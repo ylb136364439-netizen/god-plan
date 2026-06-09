@@ -41,6 +41,23 @@ GP.createPlan(next, store);
 store = GP.loadStore();
 assert.equal(store.archivedPlans.length, 1);
 assert(store.archivedPlans[0].checkins["2026-06-08"]);
+GP.saveKnowledgeCard({
+  insight: "输出能加深理解",
+  ownWords: "只有能解释和使用，才算真正学会",
+  application: "明天向朋友解释今天学到的内容",
+  applyDate: "2026-08-02",
+  status: "pending",
+  result: ""
+}, store);
+store = GP.loadStore();
+assert.equal(store.knowledgeCards.length, 1);
+assert(store.knowledgeCards[0].id);
+assert.equal(GP.getKnowledgeSummary(store, "2026-08-02").pendingApplication, 1);
+const firstReviewDate = store.knowledgeCards[0].reviewDates[0];
+GP.markKnowledgeReviewed(store.knowledgeCards[0].id, "2099-01-01", store);
+store = GP.loadStore();
+assert(store.knowledgeCards[0].reviewedDates.includes(firstReviewDate));
+assert.equal(GP.getKnowledgeSummary(store, "2099-01-01").dueReview, 0);
 const backup = GP.exportBackup(store);
 assert.equal(backup.product, "god-plan");
 assert.equal(GP.validateBackup(backup).valid, true);
@@ -50,5 +67,6 @@ GP.clearAll();
 assert.equal(GP.loadStore().activePlan, null);
 GP.importBackup(backup);
 assert.equal(GP.loadStore().activePlan.name, store.activePlan.name);
+assert.equal(GP.loadStore().knowledgeCards.length, 1);
 
 console.log("全部核心数据规则测试通过。");

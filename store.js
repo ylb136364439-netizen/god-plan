@@ -53,7 +53,7 @@
     };
   }
 
-  const emptyStore = () => ({ version: 1, activePlan: null, checkins: {}, reviews: {}, archivedPlans: [] });
+  const emptyStore = () => ({ version: 1, activePlan: null, checkins: {}, reviews: {}, knowledgeCards: [], archivedPlans: [] });
 
   function migrateLegacy(store) {
     Object.keys(localStorage).filter(key => key.startsWith("god-plan-habits-") || key.startsWith("god-plan-review-")).forEach(key => {
@@ -192,6 +192,8 @@
       return { valid: false, error: "备份数据结构不完整" };
     }
     if (data.activePlan !== null && typeof data.activePlan !== "object") return { valid: false, error: "当前计划数据无效" };
+    data.knowledgeCards ||= [];
+    if (!Array.isArray(data.knowledgeCards)) return { valid: false, error: "知识卡片数据无效" };
     return {
       valid: true,
       summary: {
@@ -199,6 +201,7 @@
         planName: data.activePlan?.name || "无当前计划",
         checkinDays: Object.keys(data.checkins).length,
         reviewDays: Object.keys(data.reviews).length,
+        knowledgeCards: data.knowledgeCards.length,
         archivedPlans: data.archivedPlans.length
       }
     };
@@ -210,9 +213,60 @@
     return saveStore(clone(backup.data));
   }
 
+  function saveKnowledgeCard(card, store = loadStore()) {
+    const now = new Date().toISOString();
+    if (card.id) {
+      const index = store.knowledgeCards.findIndex(item => item.id === card.id);
+      if (index < 0) throw new Error("没有找到这张知识卡片");
+      store.knowledgeCards[index] = { ...store.knowledgeCards[index], ...clone(card), updatedAt: now };
+    } else {
+      const newCard = clone(card);
+      delete newCard.id;
+      store.knowledgeCards.unshift({
+        id: `knowledge-${Date.now()}`,
+        learnedAt: toDateKey(),
+        applyDate: addDays(toDateKey(), 1),
+        insight: "",
+        ownWords: "",
+        application: "",
+        result: "",
+        status: "pending",
+        reviewDates: [addDays(toDateKey(), 1), addDays(toDateKey(), 3), addDays(toDateKey(), 7), addDays(toDateKey(), 30)],
+        reviewedDates: [],
+        createdAt: now,
+        updatedAt: now,
+        ...newCard
+      });
+    }
+    return saveStore(store);
+  }
+
+  function markKnowledgeReviewed(id, date = toDateKey(), store = loadStore()) {
+    const card = store.knowledgeCards.find(item => item.id === id);
+    if (!card) throw new Error("没有找到这张知识卡片");
+    card.reviewedDates ||= [];
+    (card.reviewDates || []).filter(reviewDate => reviewDate <= date).forEach(reviewDate => {
+      if (!card.reviewedDates.includes(reviewDate)) card.reviewedDates.push(reviewDate);
+    });
+    card.updatedAt = new Date().toISOString();
+    return saveStore(store);
+  }
+
+  function getKnowledgeSummary(store = loadStore(), date = toDateKey()) {
+    const cards = store.knowledgeCards || [];
+    return {
+      total: cards.length,
+      pendingApplication: cards.filter(card => card.status === "pending" && card.applyDate <= date).length,
+      applied: cards.filter(card => card.status === "applied").length,
+      validated: cards.filter(card => card.status === "validated").length,
+      dueReview: cards.filter(card => (card.reviewDates || []).some(reviewDate => reviewDate <= date && !(card.reviewedDates || []).includes(reviewDate))).length
+    };
+  }
+
   window.GodPlanStore = {
     addDays, calculateStats, clearAll, completionForDate, createPlan, defaultPlanConfig,
-    exportBackup, getPlanDay, getTasksForDate, importBackup, loadStore, parseDateKey,
-    saveReview, saveStore, toDateKey, toggleCheckin, validateBackup
+    exportBackup, getKnowledgeSummary, getPlanDay, getTasksForDate, importBackup, loadStore,
+    markKnowledgeReviewed, parseDateKey, saveKnowledgeCard, saveReview, saveStore, toDateKey,
+    toggleCheckin, validateBackup
   };
 }());
