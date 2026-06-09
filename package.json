@@ -1,0 +1,12 @@
+{
+  "name": "god-plan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "六周成长计划与每日习惯打卡 PWA",
+  "scripts": {
+    "icons": "node scripts/generate-icons.js",
+    "start": "node dev-server.js",
+    "test": "node store.test.js && node scripts/verify.js",
+    "build": "node scripts/build.js"
+  }
+}

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f2e9">
+  <meta name="description" content="六周成长计划与每日习惯打卡">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="造神计划">
+  <title>造神计划</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="connection-status" id="connectionStatus" hidden>离线使用中</div>
+  <main class="app-shell">
+    <header class="hero">
+      <div class="hero-copy"><p class="eyebrow" id="todayLabel">今天</p><h1 id="heroTitle">造神计划</h1><p class="hero-subtitle" id="heroSubtitle">把宏大的目标，过成扎实的每一天。</p></div>
+      <div class="progress-ring" id="progressRing"><div><strong id="progressPercent">0%</strong><span>今日完成</span></div></div>
+    </header>
+    <section class="page active" id="todayPage"><div id="todayContent"></div></section>
+    <section class="page" id="planPage">
+      <div class="section-heading"><div><p class="eyebrow">成长路线</p><h2>六周计划</h2></div><button class="text-button" id="editPlanButton" type="button">编辑计划</button></div>
+      <div id="planSummary"></div><div class="week-list" id="weekList"></div>
+    </section>
+    <section class="page" id="reviewPage">
+      <div class="section-heading"><div><p class="eyebrow">睡前十分钟</p><h2>每日复盘</h2></div><span class="save-state" id="saveState">自动保存</span></div>
+      <div class="date-switcher"><button id="previousReview" type="button" aria-label="前一天">‹</button><label><span>复盘日期</span><input id="reviewDate" type="date"></label><button id="nextReview" type="button" aria-label="后一天">›</button></div>
+      <form class="review-form" id="reviewForm">
+        <label><span>💼 工作：今天完成了什么？</span><textarea data-review="work" placeholder="写下一件值得记住的事"></textarea></label>
+        <label><span>💪 运动：身体感觉如何？</span><textarea data-review="sport" placeholder="记录训练和状态"></textarea></label>
+        <label><span>📈 成长：今天学到了什么？</span><textarea data-review="growth" placeholder="一句话也很好"></textarea></label>
+        <label><span>💰 开支：今天花了什么？</span><textarea data-review="money" placeholder="简单记录即可"></textarea></label>
+        <label><span>📌 明天最重要的一件事</span><textarea data-review="tomorrow" placeholder="给明天一个清晰的方向"></textarea></label>
+      </form>
+    </section>
+    <section class="page" id="profilePage">
+      <div class="section-heading"><div><p class="eyebrow">执行记录</p><h2>我的成长</h2></div></div>
+      <div class="stats-grid" id="statsGrid"></div>
+      <article class="panel"><div class="panel-heading"><strong id="calendarTitle">本月打卡</strong><span class="calendar-legend">部分 / 全部完成</span></div><div class="calendar" id="calendar"></div></article>
+      <article class="panel"><strong>各目标完成率</strong><div class="goal-stats" id="goalStats"></div></article>
+      <article class="panel">
+        <div class="panel-heading"><strong>手机独立使用</strong><span id="appVersion"></span></div>
+        <p class="support-copy">安装到手机桌面后，可像普通 App 一样打开；首次联网加载后也能离线使用。</p>
+        <div class="management-list">
+          <button class="management-button" id="installApp" type="button"><span>＋</span><div><strong>安装到手机桌面</strong><small id="installHint">查看安装方法</small></div><b>›</b></button>
+          <button class="management-button" id="exportBackup" type="button"><span>↓</span><div><strong>导出数据备份</strong><small>防止换机或清理浏览器后丢失记录</small></div><b>›</b></button>
+          <button class="management-button" id="importBackup" type="button"><span>↑</span><div><strong>导入数据备份</strong><small>从备份文件恢复全部记录</small></div><b>›</b></button>
+          <button class="management-button" id="showHelp" type="button"><span>?</span><div><strong>手机使用说明</strong><small>安装、离线与数据安全</small></div><b>›</b></button>
+        </div>
+        <input id="backupFile" type="file" accept="application/json,.json" hidden>
+      </article>
+      <article class="panel danger-panel"><strong>计划管理</strong><p id="planInfo"></p><div class="action-row"><button class="secondary-button" id="restartPlan" type="button">重新开始</button><button class="danger-button" id="clearData" type="button">清除全部数据</button></div></article>
+    </section>
+  </main>
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-page="todayPage" type="button"><span>✓</span><small>今日</small></button>
+    <button class="nav-item" data-page="planPage" type="button"><span>⌁</span><small>计划</small></button>
+    <button class="nav-item" data-page="reviewPage" type="button"><span>✎</span><small>复盘</small></button>
+    <button class="nav-item" data-page="profilePage" type="button"><span>◎</span><small>我的</small></button>
+  </nav>
+  <dialog id="planDialog">
+    <form method="dialog" id="planForm">
+      <div class="dialog-heading"><div><p class="eyebrow">六周成长模板</p><h2 id="dialogTitle">创建计划</h2></div><button class="icon-button" value="cancel" type="submit" aria-label="关闭">×</button></div>
+      <label class="field"><span>计划名称</span><input name="planName" required maxlength="24"></label>
+      <label class="field"><span>开始日期</span><input name="startDate" type="date" required></label>
+      <div class="form-section"><strong>目标名称</strong><p>保留固定六周结构，名称可以按你的习惯修改。</p></div>
+      <div class="goal-fields" id="goalFields"></div>
+      <fieldset><legend>游泳执行日</legend><div class="weekday-options" id="weekdayOptions"></div></fieldset>
+      <div class="form-section"><strong>每周重点</strong><p>可以修改尚未开始周的阶段说明。</p></div>
+      <div class="week-fields" id="weekFields"></div>
+      <button class="primary-button" id="savePlanButton" value="default" type="submit">开始计划</button>
+    </form>
+  </dialog>
+  <dialog id="infoDialog">
+    <div class="info-dialog">
+      <div class="dialog-heading"><div><p class="eyebrow" id="infoEyebrow">手机独立使用</p><h2 id="infoTitle">使用说明</h2></div><button class="icon-button" id="closeInfo" type="button" aria-label="关闭">×</button></div>
+      <div class="info-content" id="infoContent"></div>
+      <button class="primary-button" id="infoAction" type="button" hidden>确认</button>
+    </div>
+  </dialog>
+  <div class="update-banner" id="updateBanner" hidden><span>发现新版本，更新不会影响你的数据。</span><button id="updateApp" type="button">立即更新</button></div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app-config.js"></script><script src="store.js"></script><script src="app.js"></script>
+</body>
+</html>
